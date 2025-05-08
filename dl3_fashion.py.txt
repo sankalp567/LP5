@@ -1,0 +1,78 @@
+import tensorflow as tf 
+import matplotlib.pyplot as plt
+from tensorflow import keras
+import numpy as np
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, classification_report
+
+# Load dataset
+(x_train, y_train), (x_test, y_test) = keras.datasets.fashion_mnist.load_data()
+
+# Normalize pixel values
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+# Reshape for CNN input
+x_train = x_train.reshape(-1, 28, 28, 1)    
+x_test = x_test.reshape(-1, 28, 28, 1)
+
+# Define CNN model
+model = keras.Sequential([
+    keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(28,28,1)),
+    keras.layers.MaxPooling2D((2,2)),
+    keras.layers.Dropout(0.25),
+    keras.layers.Conv2D(64, (3,3), activation='relu'),
+    keras.layers.MaxPooling2D((2,2)),
+    keras.layers.Dropout(0.25),
+    keras.layers.Conv2D(128, (3,3), activation='relu'),
+    keras.layers.Flatten(),
+    keras.layers.Dense(128, activation='relu'),
+    keras.layers.Dropout(0.25),
+    keras.layers.Dense(10, activation='softmax')
+])
+
+# Compile model
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Train model
+history = model.fit(x_train, y_train, epochs=10, validation_data=(x_test, y_test))
+
+# Evaluate model
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print('Test accuracy:', test_acc)
+
+# Define class names
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+               'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+# Predict on test set
+predictions = model.predict(x_test)
+predicted_labels = np.argmax(predictions, axis=1)
+
+# Visualize predictions vs actual for first 10 test images
+plt.figure(figsize=(12, 12))
+for i in range(10):
+    plt.subplot(5, 5, i + 1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.grid(False)
+    plt.imshow(x_test[i].reshape(28, 28), cmap=plt.cm.binary)
+    true_label = class_names[y_test[i]]
+    pred_label = class_names[predicted_labels[i]]
+    color = 'green' if predicted_labels[i] == y_test[i] else 'red'
+    plt.xlabel(f"True: {true_label}\nPred: {pred_label}", color=color)
+plt.tight_layout()
+plt.show()
+
+# Confusion Matrix
+cm = confusion_matrix(y_test, predicted_labels)
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.show()
+
+# Classification report
+print("Classification Report:\n")
+print(classification_report(y_test, predicted_labels, target_names=class_names))
